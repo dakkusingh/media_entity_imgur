@@ -1,10 +1,11 @@
-imgur<?php
+<?php
 
 namespace Drupal\media_entity_imgur\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;
 use Drupal\media_entity\EmbedCodeValueTrait;
+use Drupal\media_entity_imgur\Plugin\MediaEntity\Type\Imgur;
 
 /**
  * Plugin implementation of the 'imgur_embed' formatter.
@@ -30,7 +31,7 @@ class ImgurEmbedFormatter extends FormatterBase {
       $element[$delta] = [
         '#type' => 'markup',
         '#markup' => $this->getEmbedCode($item),
-        '#allowed_tags' => ['img', 'a', 'script'],
+        '#allowed_tags' => ['blockquote', 'a', 'script'],
       ];
     }
     return $element;
