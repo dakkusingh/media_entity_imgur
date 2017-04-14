@@ -79,7 +79,9 @@ class Imgur extends MediaTypeBase {
    * @var array
    */
   public static $validationRegexp = array(
-    '@((http|https):){0,1}//(www\.){0,1}imgur\.com/photos/(?<username>[^\s]+)/(?<shortcode>[a-z0-9_-]+)@i' => 'shortcode',
+    // TODO Allow embedding bu URL.
+    // '@((http|https):){0,1}//(www\.){0,1}imgur\.com/gallery/(?<shortcode>[a-z0-9_-]+)@i' => 'shortcode',
+    '@(?P<shortcode><blockquote class=\"imgur-embed-pub\" lang=\"en\" data-id=\"(.*)\"><a href=\"//imgur.com/(.*)\">(.*)</a></blockquote><script async src=\"//s.imgur.com/min/embed.js\" charset=\"utf-8\"></script>)@i' => 'shortcode',
   );
 
   /**
@@ -88,7 +90,6 @@ class Imgur extends MediaTypeBase {
   public function providedFields() {
     $fields = array(
       'shortcode' => $this->t('Imgur shortcode'),
-      'username' => $this->t('Author of the post'),
     );
 
     if ($this->configuration['use_imgur_api']) {
@@ -100,6 +101,7 @@ class Imgur extends MediaTypeBase {
         'thumbnail_local_uri' => $this->t('Returns local URI of the thumbnail'),
         'caption' => $this->t('Caption'),
         'tags' => $this->t('Tags'),
+        'username' => $this->t('Author of the post'),
       );
     }
 
