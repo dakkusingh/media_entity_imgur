@@ -151,24 +151,31 @@ class Imgur extends MediaTypeBase {
           }
           return FALSE;
 
-        case 'thumbnail_local':
-          if (isset($imgur->thumbnail_custom)) {
-            $local_uri = $this->configFactory->get('media_entity_imgur.settings')->get('local_images') . '/' . $matches['imgurid'] . '.' . pathinfo($imgur->thumbnail_custom, PATHINFO_EXTENSION);
-
-            if (!file_exists($local_uri)) {
-              file_prepare_directory($local_uri, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS);
-
-              $image = file_get_contents($local_uri);
-              file_unmanaged_save_data($image, $local_uri, FILE_EXISTS_REPLACE);
-
-              return $local_uri;
+          case 'thumbnail_local':
+             $directory = $this->configFactory->get('media_entity_imgur.settings')->get('local_images');
+            if (!file_exists($directory)) {
+              file_prepare_directory($directory, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS);
             }
-          }
-          return FALSE;
+
+            $local_uri = $this->getField($media, 'thumbnail_local_uri');
+            if ($local_uri) {
+              if (file_exists($local_uri)) {
+                return $local_uri;
+              }
+              else {
+                $image_url = $this->getField($media, 'thumbnail');
+                $image_data = file_get_contents($image_url);
+                if ($image_data) {
+                  return file_unmanaged_save_data($image_data, $local_uri, FILE_EXISTS_REPLACE);
+                }
+              }
+            }
+            return FALSE;
 
         case 'thumbnail_local_uri':
-          if (isset($imgur->thumbnail)) {
-            return $this->configFactory->get('media_entity_imgur.settings')->get('local_images') . '/' . $matches['imgurid'] . '.' . pathinfo($imgur->thumbnail_custom, PATHINFO_EXTENSION);
+          if (isset($imgur->thumbnail_custom)) {
+            $file_info = pathinfo($imgur->thumbnail_custom);
+            return $this->configFactory->get('media_entity_imgur.settings')->get('local_images') . '/' . $file_info['filename'] . '.' . $file_info['extension'];
           }
           return FALSE;
 
