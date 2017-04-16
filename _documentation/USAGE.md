@@ -7,7 +7,7 @@
 ### 2: Create new Imgur Media Entity
 ![media-entity-imgur2](images/2-add-embed-code.jpg)
 
-### 3: Create new Imgur Media Entity
+### 3: Add Imgur Media Entity to Nodes
 ![media-entity-imgur3](images/3-add-media-to-nodes.jpg)
 
 ### 4: Enjoy
