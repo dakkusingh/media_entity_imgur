@@ -50,11 +50,12 @@ class ImgurApi {
       $body = $response->getBody();
       $data = json_decode((string) $body)->data;
       $data->lookup_type = 'image';
-      $data->thumbnail_custom = $this->makeThumbnailFileName($data);
+      $data->thumbnail_custom = $this->makeThumbnailImage($data);
       return $data;
     }
     catch (RequestException $e) {
       if ($e->getCode() !== 404) {
+        // TODO Add watchdog.
         //throw $e;
       }
     }
@@ -69,6 +70,7 @@ class ImgurApi {
     }
     catch (RequestException $e) {
       if ($e->getCode() !== 404) {
+        // TODO Add watchdog.
         //throw $e;
       }
     }
