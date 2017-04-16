@@ -224,11 +224,11 @@ class Imgur extends MediaTypeBase {
       '#default_value' => empty($this->configuration['use_imgur_api']) ? 0 : $this->configuration['use_imgur_api'],
 
       // TODO Add this once Imgur API is ready.
-      '#disabled' => TRUE,
+      //'#disabled' => TRUE,
       '#options' => [
         0 => $this->t('No'),
         // TODO Add this once Imgur API is ready.
-        // 1 => $this->t('Yes'),
+        1 => $this->t('Yes'),
       ],
     ];
 
@@ -306,7 +306,7 @@ class Imgur extends MediaTypeBase {
     if (!isset($imgur)) {
       // Check for dependencies.
       // @todo There is perhaps a better way to do that.
-      if (!class_exists('\Imgur\Imgur')) {
+      if (!class_exists('\Imgur\ImgurApi')) {
         drupal_set_message($this->t('Imgur library is not available. Consult the README.md for installation instructions.'), 'error');
         return;
       }
@@ -319,9 +319,9 @@ class Imgur extends MediaTypeBase {
         drupal_set_message($this->t('The client ID is missing. Please add it in your Imgur settings.'), 'error');
         return;
       }
-      $imgur_object = new ImgurApi();
-      $imgur_object->setClientID($this->configuration['client_id']);
-      $result = $imgur_object->getMediaByShortcode($shortcode)->getData();
+      //$imgur_object = new ImgurApi();
+      //$imgur_object->setClientID($this->configuration['client_id']);
+      //$result = $imgur_object->getMediaByShortcode($shortcode)->getData();
 
       if ($result) {
         return $result;
