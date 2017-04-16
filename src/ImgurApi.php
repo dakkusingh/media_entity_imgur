@@ -48,7 +48,10 @@ class ImgurApi {
     try {
       $response = $this->client->get('image/' . $imageIdOrAlbumId);
       $body = $response->getBody();
-      return json_decode((string) $body)->data;
+      $data = json_decode((string) $body)->data;
+      $data->lookup_type = 'image';
+      $data->thumbnail_custom = $this->makeThumbnailFileName($data);
+      return $data;
     }
     catch (RequestException $e) {
       if ($e->getCode() !== 404) {
@@ -59,7 +62,10 @@ class ImgurApi {
     try {
       $response = $this->client->get('album/' . $imageIdOrAlbumId);
       $body = $response->getBody();
-      return json_decode((string) $body)->data;
+      $data = json_decode((string) $body)->data;
+      $data->lookup_type = 'album';
+      $data->thumbnail_custom = $this->makeThumbnailAlbum($data);
+      return $data;
     }
     catch (RequestException $e) {
       if ($e->getCode() !== 404) {
@@ -68,4 +74,24 @@ class ImgurApi {
     }
     //throw new ErrorException('Unable to find an album OR an image with the id, ' . $imageIdOrAlbumId);
   }
+
+  private function makeThumbnailImage($imgur) {
+    $file_info = pathinfo($imgur->link);
+    // See thumbnail sizes at
+    // https://api.imgur.com/models/image/
+    // We will make large thumbnails
+    $filename = $file_info['filename'] . 'l';
+    $thumbnail_filename = str_replace($file_info['filename'], $filename, $imgur->link);
+    return $thumbnail_filename;
+  }
+
+  private function makeThumbnailAlbum($data) {
+    $images = $data->images;
+    foreach ($images as $image) {
+      if ($data->cover == $image->id) {
+        return $this->makeThumbnailImage($image);
+      }
+    }
+  }
+
 }
