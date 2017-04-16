@@ -10,6 +10,7 @@ use Drupal\media_entity\MediaInterface;
 use Drupal\media_entity\MediaTypeBase;
 use Drupal\media_entity\MediaTypeException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\media_entity_imgur\ImgurApi;
 
 /**
  * Provides media type plugin for Imgur.
@@ -81,7 +82,7 @@ class Imgur extends MediaTypeBase {
   public static $validationRegexp = array(
     // TODO Allow embedding bu URL.
     // '@((http|https):){0,1}//(www\.){0,1}imgur\.com/gallery/(?<shortcode>[a-z0-9_-]+)@i' => 'shortcode',
-    '@(?P<shortcode><blockquote class=\"imgur-embed-pub\" lang=\"en\" data-id=\"(.*)\"><a href=\"//imgur.com/(.*)\">(.*)</a></blockquote><script async src=\"//s.imgur.com/min/embed.js\" charset=\"utf-8\"></script>)@i' => 'shortcode',
+    '@(?P<shortcode><blockquote class=\"imgur-embed-pub\" lang=\"en\" data-id=\"(.*)\"><a href=\"//imgur.com/(?P<imgurid>.*)\">(.*)</a></blockquote><script async src=\"//s.imgur.com/min/embed.js\" charset=\"utf-8\"></script>)@i' => 'shortcode',
   );
 
   /**
@@ -95,7 +96,7 @@ class Imgur extends MediaTypeBase {
     if ($this->configuration['use_imgur_api']) {
       $fields += array(
         'id' => $this->t('Media ID'),
-        'type' => $this->t('Media type: image or video'),
+        'type' => $this->t('Media type: image or album'),
         'thumbnail' => $this->t('Link to the thumbnail'),
         'thumbnail_local' => $this->t("Copies thumbnail locally and return it's URI"),
         'thumbnail_local_uri' => $this->t('Returns local URI of the thumbnail'),
@@ -122,17 +123,9 @@ class Imgur extends MediaTypeBase {
       return $matches['shortcode'];
     }
 
-    if (!$matches['username']) {
-      return FALSE;
-    }
-
-    if ($name == 'username') {
-      return $matches['shortcode'];
-    }
-
     // TODO Add this once Imgur API is ready.
     // If we have auth settings return the other fields.
-    if ($this->configuration['use_imgur_api'] && $imgur = $this->fetchImgur($matches['shortcode'])) {
+    if ($this->configuration['use_imgur_api'] && $imgur = $this->fetchImgur($matches['imgurid'])) {
       switch ($name) {
         case 'id':
           if (isset($imgur->id)) {
@@ -140,21 +133,27 @@ class Imgur extends MediaTypeBase {
           }
           return FALSE;
 
+          case 'username':
+            if (isset($imgur->id)) {
+              return $imgur->account_url;
+            }
+            return FALSE;
+
         case 'type':
-          if (isset($imgur->type)) {
-            return $imgur->type;
+          if (isset($imgur->lookup_type)) {
+            return $imgur->lookup_type;
           }
           return FALSE;
 
         case 'thumbnail':
-          if (isset($imgur->images->thumbnail->url)) {
-            return $imgur->images->thumbnail->url;
+          if (isset($imgur->thumbnail_custom)) {
+            return $imgur->thumbnail_custom;
           }
           return FALSE;
 
         case 'thumbnail_local':
-          if (isset($imgur->images->thumbnail->url)) {
-            $local_uri = $this->configFactory->get('media_entity_imgur.settings')->get('local_images') . '/' . $matches['shortcode'] . '.' . pathinfo($imgur->images->thumbnail->url, PATHINFO_EXTENSION);
+          if (isset($imgur->thumbnail_custom)) {
+            $local_uri = $this->configFactory->get('media_entity_imgur.settings')->get('local_images') . '/' . $matches['imgurid'] . '.' . pathinfo($imgur->thumbnail_custom, PATHINFO_EXTENSION);
 
             if (!file_exists($local_uri)) {
               file_prepare_directory($local_uri, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS);
@@ -168,26 +167,21 @@ class Imgur extends MediaTypeBase {
           return FALSE;
 
         case 'thumbnail_local_uri':
-          if (isset($imgur->images->thumbnail->url)) {
-            return $this->configFactory->get('media_entity_imgur.settings')->get('local_images') . '/' . $matches['shortcode'] . '.' . pathinfo($imgur->images->thumbnail->url, PATHINFO_EXTENSION);
-          }
-          return FALSE;
-
-        case 'username':
-          if (isset($imgur->user->username)) {
-            return $imgur->user->username;
+          if (isset($imgur->thumbnail)) {
+            return $this->configFactory->get('media_entity_imgur.settings')->get('local_images') . '/' . $matches['imgurid'] . '.' . pathinfo($imgur->thumbnail_custom, PATHINFO_EXTENSION);
           }
           return FALSE;
 
         case 'caption':
-          if (isset($imgur->caption->text)) {
-            return $imgur->caption->text;
+          if (isset($imgur->title)) {
+            return $imgur->title;
           }
           return FALSE;
 
         case 'tags':
-          if (isset($imgur->tags)) {
-            return implode(" ", $imgur->tags);
+          if (isset($imgur->section)) {
+            //return implode(" ", $imgur->tags);
+            return $imgur->section;
           }
           return FALSE;
       }
@@ -222,12 +216,8 @@ class Imgur extends MediaTypeBase {
       '#title' => $this->t('Use Imgur api to fetch photos.'),
       '#description' => $this->t("In order to use Imgur's api you have to create a developer account and an application. For more information consult the readme file."),
       '#default_value' => empty($this->configuration['use_imgur_api']) ? 0 : $this->configuration['use_imgur_api'],
-
-      // TODO Add this once Imgur API is ready.
-      //'#disabled' => TRUE,
       '#options' => [
         0 => $this->t('No'),
-        // TODO Add this once Imgur API is ready.
         1 => $this->t('Yes'),
       ],
     ];
@@ -300,17 +290,10 @@ class Imgur extends MediaTypeBase {
    *
    * TODO Add this once Imgur API is ready.
    */
-  protected function fetchImgur($shortcode) {
+  protected function fetchImgur($imgurid) {
     $imgur = &drupal_static(__FUNCTION__);
 
     if (!isset($imgur)) {
-      // Check for dependencies.
-      // @todo There is perhaps a better way to do that.
-      if (!class_exists('\Imgur\ImgurApi')) {
-        drupal_set_message($this->t('Imgur library is not available. Consult the README.md for installation instructions.'), 'error');
-        return;
-      }
-
       if (!isset($this->configuration['client_id'])) {
         drupal_set_message($this->t('The client ID is not available. Consult the README.md for installation instructions.'), 'error');
         return;
@@ -319,9 +302,9 @@ class Imgur extends MediaTypeBase {
         drupal_set_message($this->t('The client ID is missing. Please add it in your Imgur settings.'), 'error');
         return;
       }
-      //$imgur_object = new ImgurApi();
-      //$imgur_object->setClientID($this->configuration['client_id']);
-      //$result = $imgur_object->getMediaByShortcode($shortcode)->getData();
+
+      $imgur_object = new ImgurApi($this->configuration['client_id']);
+      $result = $imgur_object->albumOrImage($imgurid);
 
       if ($result) {
         return $result;
