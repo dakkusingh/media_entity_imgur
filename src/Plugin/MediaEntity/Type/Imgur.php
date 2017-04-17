@@ -123,7 +123,6 @@ class Imgur extends MediaTypeBase {
       return $matches['shortcode'];
     }
 
-    // TODO Add this once Imgur API is ready.
     // If we have auth settings return the other fields.
     if ($this->configuration['use_imgur_api'] && $imgur = $this->fetchImgur($matches['imgurid'])) {
       switch ($name) {
@@ -294,8 +293,6 @@ class Imgur extends MediaTypeBase {
    *
    * @param string $shortcode
    *   The imgur shortcode.
-   *
-   * TODO Add this once Imgur API is ready.
    */
   protected function fetchImgur($imgurid) {
     $imgur = &drupal_static(__FUNCTION__);
